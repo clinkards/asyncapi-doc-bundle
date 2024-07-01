@@ -25,7 +25,7 @@ final readonly class ReflectionDocumentationStrategy implements PrioritisedDocum
      * @throws ReflectionException
      * @throws DocumentationStrategyException
      */
-    public function document(string $class): Message
+    public function document(string $class, bool $convertToSnakeCase = true): Message
     {
         $reflection = new ReflectionClass($class);
         /** @var ReflectionAttribute<Message>[] $messageAttributes */
@@ -37,31 +37,31 @@ final readonly class ReflectionDocumentationStrategy implements PrioritisedDocum
 
         $message = $messageAttributes[0]->newInstance();
 
-        $properties = $reflection->getProperties();
+        $parameters = new \ReflectionMethod($class, '__construct');
+
+        $properties = $parameters->getParameters();
+
         foreach ($properties as $property) {
             /** @var ReflectionNamedType|null $type */
             $type = $property->getType();
             $name = $property->getName();
 
+            if ($convertToSnakeCase) {
+                $name = preg_replace('/(?<!^)[A-Z]/', '_$0', $property->getName());
+                $name = strtolower($name);
+            }
+
             if (null === $type) {
                 break;
             }
 
-            // ATM we don't support array types in ReflectionStrategy
-            if (in_array($type->getName(), ['array', 'object', 'resource'])) {
-                break;
-            }
-
-            // ATM we support only builtin types like integer, string, boolean, float
-            if ($type->isBuiltin()) {
-                $message->addProperty(
-                    new Property(
-                        name: $name,
-                        type: PropertyType::fromNative($type->getName()),
-                        required: !$type->allowsNull(),
-                    )
-                );
-            }
+            $message->addProperty(
+                new Property(
+                    name: $name,
+                    type: PropertyType::fromNative($type->getName()),
+                    required: !$type->allowsNull(),
+                )
+            );
         }
 
         return $message;

@@ -12,6 +12,7 @@ class PropertyTypeTranslator
             'bool', 'boolean' => 'boolean',
             'int', 'integer' => 'integer',
             'float', 'number' => 'number',
+            'array' => 'array',
             default => 'string',
         };
     }

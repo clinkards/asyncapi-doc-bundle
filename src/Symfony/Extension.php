@@ -157,7 +157,7 @@ final class Extension extends SymfonyExtension
         $container
             ->register('ferror.asyncapi_doc_bundle.console', DumpSpecificationConsole::class)
             ->addArgument(new Reference('ferror.asyncapi_doc_bundle.generator-factory'))
-            ->addArgument(new Reference('ferror.asyncapi_doc_bundle.documentation.attributes'))
+            ->addArgument(new Reference('ferror.asyncapi_doc_bundle.documentation.reflection'))
             ->addArgument(new Reference(MessageV2Renderer::class))
             ->addTag('console.command')
         ;

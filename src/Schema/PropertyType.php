@@ -13,6 +13,7 @@ enum PropertyType: string
     case BOOLEAN = 'boolean';
     case INTEGER = 'integer';
     case FLOAT = 'number';
+    case ARRAY = 'array';
 
     public static function fromNative(string $type): self
     {
@@ -20,6 +21,7 @@ enum PropertyType: string
             'bool', 'boolean' => self::BOOLEAN,
             'int', 'integer' => self::INTEGER,
             'float', 'number' => self::FLOAT,
+            'array' => self::ARRAY,
             default => self::STRING,
         };
     }

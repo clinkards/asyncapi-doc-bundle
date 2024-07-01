@@ -2,3 +2,4 @@
 /var/
 /composer.lock
 /.deptrac.cache
+/.idea/
