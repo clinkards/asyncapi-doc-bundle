@@ -11,6 +11,7 @@ use Ferror\AsyncapiDocBundle\Schema\PropertyType;
 #[Attribute(Attribute::TARGET_PROPERTY)]
 class Property extends AbstractProperty
 {
+    /** @param array<int, Property> $children */
     public function __construct(
         string $name,
         string $description = '',
@@ -18,6 +19,7 @@ class Property extends AbstractProperty
         public ?Format $format = null,
         public ?string $example = null,
         bool $required = true,
+        private array $children = [],
     ) {
         parent::__construct($name, $description, $required);
     }
@@ -28,7 +30,13 @@ class Property extends AbstractProperty
             'type' => $this->type->value,
             'format' => $this->format?->value,
             'example' => $this->example,
+            'children' => $this->children,
         ]);
+    }
+
+    public function addChild(Property $property): void
+    {
+        $this->children[] = $property;
     }
 
     public function enrich(Property|PropertyArray|PropertyEnum|PropertyObject|PropertyArrayObject $property): void

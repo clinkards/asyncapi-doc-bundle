@@ -6,11 +6,13 @@ namespace Ferror\AsyncapiDocBundle\DocumentationStrategy;
 
 use Ferror\AsyncapiDocBundle\Attribute\Message;
 use Ferror\AsyncapiDocBundle\Attribute\Property;
+use Ferror\AsyncapiDocBundle\Attribute\PropertyArray;
 use Ferror\AsyncapiDocBundle\Schema\PropertyType;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionNamedType;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 final readonly class ReflectionDocumentationStrategy implements PrioritisedDocumentationStrategyInterface
 {
@@ -28,40 +30,66 @@ final readonly class ReflectionDocumentationStrategy implements PrioritisedDocum
     public function document(string $class, bool $convertToSnakeCase = true): Message
     {
         $reflection = new ReflectionClass($class);
-        /** @var ReflectionAttribute<Message>[] $messageAttributes */
-        $messageAttributes = $reflection->getAttributes(Message::class);
 
-        if (empty($messageAttributes)) {
-            throw new DocumentationStrategyException('Error: class ' . $class . ' must have at least ' . Message::class . ' attribute.');
-        }
-
-        $message = $messageAttributes[0]->newInstance();
+        $message = new Message($reflection->getShortName());
 
         $parameters = new \ReflectionMethod($class, '__construct');
 
         $properties = $parameters->getParameters();
+
+        $doc = $parameters->getDocComment();
 
         foreach ($properties as $property) {
             /** @var ReflectionNamedType|null $type */
             $type = $property->getType();
             $name = $property->getName();
 
+            if (null === $type) {
+                break;
+            }
+
             if ($convertToSnakeCase) {
                 $name = preg_replace('/(?<!^)[A-Z]/', '_$0', $property->getName());
                 $name = strtolower($name);
             }
 
-            if (null === $type) {
-                break;
-            }
-
-            $message->addProperty(
-                new Property(
-                    name: $name,
-                    type: PropertyType::fromNative($type->getName()),
-                    required: !$type->allowsNull(),
-                )
+            $parentProperty = new Property(
+                name: $name,
+                type: PropertyType::fromNative($type->getName()),
+                required: !$type->allowsNull(),
             );
+
+            $message->addProperty($parentProperty);
+
+            if ($type->getName() === 'array') {
+                $pattern = '/@param\s+array<int,\s*array\{\s*(.*?)\s*\}>\s+\$(\w+)/';
+
+                preg_match_all($pattern, $doc, $matches, PREG_SET_ORDER);
+
+                $params = [];
+
+                foreach ($matches as $match) {
+                    $paramName = $match[2];
+                    $paramDetails = $match[1];
+
+                    preg_match_all('/(\w+):\s*([^\s,]+)/', $paramDetails, $elementMatches, PREG_SET_ORDER);
+
+                    $paramElements = [];
+                    foreach ($elementMatches as $elementMatch) {
+                        $paramElements[$elementMatch[1]] = $elementMatch[2];
+                    }
+
+                    $params[$paramName] = $paramElements;
+                }
+
+                foreach ($params[$property->getName()] as $name => $type) {
+                    $parentProperty->addChild(new Property(
+                        name: $name,
+                        type: PropertyType::fromNative($type),
+                        required: false
+                    ));
+                }
+            }
         }
 
         return $message;
