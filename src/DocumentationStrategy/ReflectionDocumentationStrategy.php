@@ -72,21 +72,29 @@ final readonly class ReflectionDocumentationStrategy implements PrioritisedDocum
                     $paramName = $match[2];
                     $paramDetails = $match[1];
 
-                    preg_match_all('/(\w+):\s*([^\s,]+)/', $paramDetails, $elementMatches, PREG_SET_ORDER);
+                    preg_match_all('/(\w+):\s*(\??\w+)/', $paramDetails, $elementMatches, PREG_SET_ORDER);
 
                     $paramElements = [];
                     foreach ($elementMatches as $elementMatch) {
-                        $paramElements[$elementMatch[1]] = $elementMatch[2];
+
+                        $isNullable = $elementMatch[2][0] === '?';
+
+                        $type = $isNullable ? substr($elementMatch[2], 1) : $elementMatch[2];
+
+                        $paramElements[$elementMatch[1]] = [
+                            'type' => $type,
+                            'required' => !$isNullable
+                        ];
                     }
 
                     $params[$paramName] = $paramElements;
                 }
 
-                foreach ($params[$property->getName()] as $name => $type) {
+                foreach ($params[$property->getName()] as $name => $details) {
                     $parentProperty->addChild(new Property(
                         name: $name,
-                        type: PropertyType::fromNative($type),
-                        required: false
+                        type: PropertyType::fromNative($details['type']),
+                        required: $details['required'],
                     ));
                 }
             }
